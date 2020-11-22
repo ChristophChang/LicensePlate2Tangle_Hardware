@@ -22,21 +22,20 @@
 #include "platform/mbed_thread.h"
 
 
-// Serial to communicate with the 
+const char appKey[] = LORAWAN_APP_KEY;
+const char appEUI[] = LORAWAN_APP_EUI;
+
+
+constexpr time_t kSendDutyTimeS = 60;            // Try to send data all 60s, if data is available
+constexpr time_t kReceiveDutyTimeS = 60;         // Check all 60s for incoming data
+constexpr uint32_t kThreadSleepTimeMs = 30000;   // Wake up all 60s
+
+
+// Serial to communicate with the
 static BufferedSerial serialLora(LRWAN1_UART_TX, LRWAN1_UART_RX, LRWAN1_UART_BAUD);
-//static BufferedSerial serialLora(PA_9, PA_10, 115200);
 HardwareSerial_mbedPort SerialLora(&serialLora);
 
-// Tx buffer 
-char frameTx[100];
-// Rx buffer
-uint8_t frameRx[200];
 
-// const char appKey[] = "06EB704DA820830B830E0DE331380D5E";
-// const char appEUI[] = "70B3D57ED0037C11";
-
-const char appKey[] = LORAWAN_APP_KEY; 
-const char appEUI[] = LORAWAN_APP_EUI;
 
 
 LoraCommunication::LoraCommunication() : thread(osPriorityNormal, 4096),
@@ -61,7 +60,7 @@ bool LoraCommunication::sendMessage(const uint8_t *data, size_t length)
     TxMessage *message = new TxMessage(data, length);
     if(false == txMessageQueue.try_put(message)) {
        // If the message queue is already full, the not used object must be destroyed
-       delete message; 
+       delete message;
     }
     return true;
 }
@@ -82,24 +81,11 @@ bool LoraCommunication::receiveMessage(uint8_t *buffer, const size_t bufferSize,
     return false;
 }
 
-void LoraCommunication::run()
+void LoraCommunication::printLRWAN1Info()
 {
-    initialize();
-    
-    time_t start = time(NULL);
-    
-    while (true)
-    {
-        receive();
-        
-        // Try to send every 30s
-        if(time(NULL) > (start + 60)) {
-            transmit();
-            start = time(NULL);
-        }
-        
-        thread_sleep_for(10000);
-    }
+    printf("Device EUI: %s", boardDevEUI.c_str());
+    printf("App Key: %s", boardAppKey.c_str());
+    printf("App EUI: %s", boardAppEUI.c_str());
 }
 
 void LoraCommunication::initialize()
@@ -118,7 +104,7 @@ void LoraCommunication::initialize()
     printf("Lora module initialized\r\n");
 
     thread_sleep_for(1000);
-    
+
     printf("Starting join OTAA procedure...\r\n");
     // Send a join request and wait for the join accept
     while (!loraNode.joinOTAA(appKey, appEUI))
@@ -132,13 +118,13 @@ void LoraCommunication::initialize()
     // The LRWAN1 has been sucessfully connected with your LoRaWAN network e.g. TTN
     printf("Join OTAA success!\r\n");
     printf("\r\nLora module ready, join accepted.\r\n\n");
-    
+
     // Read out some additonal information about your LRWAN1 board
     printf("Reading lora module information\r\n");
     loraNode.getDevEUI(boardDevEUI);
     loraNode.getAppKey(boardAppKey);
-    loraNode.getAppEUI(boardEUIKey);
-    
+    loraNode.getAppEUI(boardAppEUI);
+
     status = Status::UP;
 }
 
@@ -158,11 +144,10 @@ bool LoraCommunication::receive()
         result = true;
     }
     else {
-        printf("No LoRa data on port %d available\r\n", port);
         delete message;
     }
 
-    return result; 
+    return result;
 }
 
 bool LoraCommunication::transmit()
@@ -198,5 +183,31 @@ bool LoraCommunication::transmit()
             delete message;
         }
     }
-    return result; 
+    return result;
+}
+
+void LoraCommunication::run()
+{
+    initialize();
+
+    txMessageSendTimer = time(NULL);
+    rxMessagePollTimer = time(NULL);
+
+    while (true)
+    {
+        receive();
+        // IF the time has elapsed send data, if available
+        if(time(NULL) > (rxMessagePollTimer + kReceiveDutyTimeS)) {
+            receive();
+            txMessageSendTimer = time(NULL);
+        }
+
+        // IF the time has elapsed send data, if available
+        if(time(NULL) > (txMessageSendTimer + kSendDutyTimeS)) {
+            transmit();
+            txMessageSendTimer = time(NULL);
+        }
+
+        thread_sleep_for(kThreadSleepTimeMs);
+    }
 }
