@@ -41,13 +41,18 @@ HardwareSerial_mbedPort SerialLora(&serialLora);
 LoraCommunication::LoraCommunication() : thread(osPriorityNormal, 4096),
                                          status(Status::NOINIT)
 {
-    // Directly start the thread
-    thread.start(callback(this, &LoraCommunication::run));
+
 }
 
 LoraCommunication::~LoraCommunication()
 {
 
+}
+
+void LoraCommunication::enable()
+{
+    // Just start the thread, the initialization is done within the thread
+    thread.start(callback(this, &LoraCommunication::run));
 }
 
 LoraCommunication::Status LoraCommunication::getStatus() const

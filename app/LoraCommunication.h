@@ -32,6 +32,10 @@ public:
         ERROR
     };
 
+    /**
+     * Start the communication module
+     */
+    void enable();
 
     /**
      * Get the status of the LoRa communication
