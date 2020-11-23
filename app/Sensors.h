@@ -42,7 +42,7 @@ enum SensorType {
 
 
 /**
-  * All environment sensors of the parking meter. 
+  * All environment sensors of the parking meter.
   * Could be used for localized weather information.
   */
 class Sensors
@@ -52,7 +52,7 @@ public:
     ~Sensors();
 
     /**
-     * Enable this sensor 
+     * Enable this sensor
      */
     void enable(SensorType sensor = AllSensors);
 
@@ -62,9 +62,14 @@ public:
     void disable(SensorType sensor = AllSensors);
 
     /**
-     * Do a read on the enabled sensors to get new sensor values 
+     * Do a read on the enabled sensors to get new sensor values
      */
     void read();
+
+    /**
+     * Get sensor data, of the external sensors
+     */
+    float getValueFloat(SensorType sensor);
 
     /**
      * Convert the enabled sensor data to
@@ -82,7 +87,7 @@ private:
 
     // Read in data will be store in these variables
     float humidity;                     // [%]
-    float temperature1;                 // [C] 
+    float temperature1;                 // [C]
     float pressure;                     // [mbar]
     float temperature2;                 // [C]
     int32_t accelerometerAxes[3];       // [mg]

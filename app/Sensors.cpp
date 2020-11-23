@@ -25,9 +25,9 @@
 #include "helpers.h"
 
 
-uint8_t flag[] = { 
-    0x00,       // NoSensors 
-    0xFF,       // AllSensors 
+uint8_t flag[] = {
+    0x00,       // NoSensors
+    0xFF,       // AllSensors
     0x01,       // Humidity,
     0x02,       // Temperature1,
     0x04,       // Pressure,
@@ -37,7 +37,7 @@ uint8_t flag[] = {
 };
 
 Sensors::Sensors() :
-    enableFlags(0x07)
+    enableFlags(flag[NoSensors])
 {
     i2cLoraShield = new DevI2C(LRWAN1_I2C_SDA, LRWAN1_I2C_SCL);
 
@@ -64,7 +64,7 @@ void Sensors::enable(SensorType sensor)
     {
     case Humidity :
     case Temperature1 :
-        hts221_humTemp->enable(); 
+        hts221_humTemp->enable();
         break;
     case Pressure :
     case Temperature2 :
@@ -77,7 +77,7 @@ void Sensors::enable(SensorType sensor)
         lsm303agr_mag->enable();
         break;
     case AllSensors :
-        hts221_humTemp->enable(); 
+        hts221_humTemp->enable();
         lps22hb_pressTemp->enable();
         lsm303agr_acc->enable();
         lsm303agr_mag->enable();
@@ -95,14 +95,14 @@ void Sensors::disable(SensorType sensor)
     {
     case Humidity :
     case Temperature1 :
-        // Can only be disabled, if both values are not requested 
+        // Can only be disabled, if both values are not requested
         if( 0x00 == (enableFlags & (flag[Humidity] | flag[Temperature1]))) {
-            hts221_humTemp->disable(); 
+            hts221_humTemp->disable();
         }
         break;
     case Pressure :
     case Temperature2 :
-        // Can only be disabled, if both values are not requested 
+        // Can only be disabled, if both values are not requested
         if( 0x00 == (enableFlags & (flag[Pressure] | flag[Temperature2]))) {
             lps22hb_pressTemp->disable();
         }
@@ -114,7 +114,7 @@ void Sensors::disable(SensorType sensor)
         lsm303agr_mag->disable();
         break;
     case AllSensors :
-        hts221_humTemp->disable(); 
+        hts221_humTemp->disable();
         lps22hb_pressTemp->disable();
         lsm303agr_acc->disable();
         lsm303agr_mag->disable();
@@ -122,6 +122,30 @@ void Sensors::disable(SensorType sensor)
     default:
         break;
    }
+}
+
+float Sensors::getValueFloat(SensorType sensor)
+{
+    float value = 0.0;
+
+    switch (sensor) {
+    case Humidity:
+        value = humidity;
+        break;
+    case Temperature1:
+        value = temperature1;
+        break;
+    case Pressure:
+        value = pressure;
+        break;
+    case Temperature2:
+        value = temperature2;
+        break;
+    default:
+        break;
+   }
+
+   return value;
 }
 
 void Sensors::read()
@@ -157,8 +181,8 @@ std::string Sensors::toJSON()
     char buffer[32];
     char valueBuffer[10];
     std::string json("{");
-    json.append("\"s\:\"0xff\",");
-   
+    json.append("\"s\":\"0xff\",");
+
     if((enableFlags & flag[Humidity]) == flag[Humidity]) {
         snprintf(buffer, sizeof(buffer), "\"h\":%3s,", print_double(valueBuffer, humidity, 1));
         json.append(buffer);
