@@ -81,7 +81,7 @@ void LicensePlateDisplay::setLicense(std::string license)
 {
     this->license = license;
 }
-    
+
 void LicensePlateDisplay::setParkingEndTime(time_t parkingEndTime)
 {
     this->parkingEndTime = parkingEndTime;
@@ -149,7 +149,7 @@ void LicensePlateDisplay::paintWelcomeScreen()
             }
         }
     }
-} 
+}
 
 void LicensePlateDisplay::paintParkingScreen()
 {
@@ -169,7 +169,7 @@ void LicensePlateDisplay::paintParkingScreen()
     // Draw the battery level in the top right corner
     paintBatteryLevel();
 
-    // Convert timestamp to string 
+    // Convert timestamp to string
     char buffer[5];
     char oneCharBuffer[2] = "";
     std::tm * ptm = std::localtime(&parkingEndTime);
@@ -200,7 +200,7 @@ void LicensePlateDisplay::paintParkingScreen()
     oneCharBuffer[0] = buffer[3];
     painter.DrawStringAt(360, 140, oneCharBuffer, &Font4040, COLORED);
 
-    // Draw the license plate 
+    // Draw the license plate
     constexpr int ralign = 35;
 
     // Country identifier (DE right now)
@@ -215,7 +215,7 @@ void LicensePlateDisplay::paintParkingScreen()
     // Badge
     painter.DrawStringAt(ralign + 75,  210, ":", &EuroFont9664, COLORED);
 
-    // Random letters  
+    // Random letters
     oneCharBuffer[0] = license[3];
     painter.DrawStringAt(ralign + 115, 210, oneCharBuffer, &EuroFont9664, COLORED);
     oneCharBuffer[0] = license[4];

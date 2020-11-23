@@ -26,20 +26,18 @@
 #include <string>
 
 
-
+enum class BatteryLevel
+{
+    EMPTY,
+    LITTLE,
+    MEDIUM,
+    FULL
+};
 
 
 class LicensePlateDisplay
 {
 public:
-    enum class BatteryLevel
-    {
-        EMPTY,
-        LITTLE,
-        MEDIUM,
-        FULL
-    };
-
     LicensePlateDisplay();
     ~LicensePlateDisplay();
 
