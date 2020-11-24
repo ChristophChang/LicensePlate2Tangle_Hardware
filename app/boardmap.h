@@ -56,5 +56,6 @@
 #define LORAWAN_APP_KEY         "06EB704DA820830B830E0DE331380D5E"
 #define LORAWAN_APP_EUI         "70B3D57ED0037C11"
 
+#define QRCODE_APP_ID           "LicensePlate2Tangle,uid=E24F43FFFE44C3FC"
 
 #endif /* BOARD_MAP_H */

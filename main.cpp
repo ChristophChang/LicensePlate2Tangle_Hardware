@@ -26,7 +26,7 @@
 #include "app/ParkingArea.h"
 
 #include "QRCode/src/qrcode.h"
-
+#include "JSON/Json.h"
 
 // Console 
 static BufferedSerial serial_port(CONSOLE_TX, CONSOLE_RX, CONSOLE_BAUD);
@@ -36,9 +36,80 @@ FileHandle *mbed::mbed_override_console(int fd)
     return &serial_port;
 }
 
+/**
+ * Parse a json message and look for license plate and endtime information 
+ */
+bool parseJsonMessage(const char* jsonString, size_t length, std::string &license, time_t &endtime)
+{
+
+    Json json(jsonString, strlen(jsonString));
+
+    // Do some sanity checking first
+    if (!json.isValidJson()) {
+        printf("JSON: json string is not valid. String: %sr\r\n", jsonString);
+        return false;
+    }
+
+    if (json.type(0) != JSMN_OBJECT) {
+        printf("JSON: Root object is not a valid json object\r\n");
+        return false;
+    }
+
+    // 1. find valid license plate data
+    int keyIndex = json.findKeyIndexIn("l", 0);
+
+    if (-1 == keyIndex) {
+        printf("JSON: No valid license data found\r\n");
+        return false;
+    }
+    else {
+        int valueIndex = json.findChildIndexOf(keyIndex, -1);
+        if (valueIndex > 0) {
+            const char *valueStart = json.tokenAddress(valueIndex);
+            int valueLength = json.tokenLength(valueIndex);
+
+            char value[32];
+            strncpy(value, valueStart, valueLength);
+            value[valueLength] = 0; // NULL-terminate the string
+            license = std::string(value);
+        }
+    }
+
+    // 2. find the parking end time 
+    keyIndex = json.findKeyIndexIn("t", 0);
+
+    if (-1 == keyIndex) {
+        printf("JSON: No valid parking end time data found\r\n");
+        return false;
+    }
+    else {
+        int valueIndex = json.findChildIndexOf(keyIndex, -1);
+        if (valueIndex > 0) {
+            const char *valueStart = json.tokenAddress(valueIndex);
+            int valueLength = json.tokenLength(valueIndex);
+
+            // Even we are looking for a numer the time_t is a 8byte value
+            // therefore we must 
+            char value[32];
+            strncpy(value, valueStart, valueLength);
+            value[valueLength] = 0; // NULL-terminate the string
+            endtime = (time_t) stoll(value);
+        }
+    }
+    
+    return true;
+}
+
+
+/**
+ * The main program starts here
+ */
 int main()
 {    
-    printf("LicensePlate2Tangle Project\r\n");
+    printf("\r\n");
+    printf("=====================================\r\n");
+    printf("=====LicensePlate2Tangle Project=====\r\n");
+    printf("=====================================\r\n\n");
 
     // Initialize the license plate components
     ParkingArea parkingArea;
@@ -53,60 +124,73 @@ int main()
 
     // Update the display information with the temperature value
     // read from the sensor
+    printf("Get temperature\r\n");
     display.setTemperature(sensorBoard.getValueFloat(Temperature1));
 
     // For now the battery level is not supported, for now set it to full
+    printf("Get battery level\r\n");
     display.setBatteryLevel(BatteryLevel::FULL);
 
     // The QRCode will only be generated once
+    printf("Create QRCode from device\r\n");
     QRCode qrcode;
     uint8_t *qrcodeData = new uint8_t[qrcode_getBufferSize(4)];
-    qrcode_initText(&qrcode, qrcodeData, 4, 0, "LicensePlate2Tangle,uid=E24F43FFFE44C3FC");   
+    qrcode_initText(&qrcode, qrcodeData, 4, 0, QRCODE_APP_ID);   
 
     display.setQRCode(&qrcode);
 
     // On startup and show the welcome screen 
+    printf("Show welcome screen\r\n");
     display.enable();
-    display.showWelcomeScreen();
-
-
+    
     // Now start up the lora communication module
     printf("Initializing the Lora communication module\r\n");
     lora.enable(); 
 
+
     char messageBuffer[80];
     size_t receivedBytes = 0;
-    
+    uint8_t deviceStatus = 0x00;
+
     while (true) {
-
         // Now wait until the lora communication module is ready
-        if(LoraCommunication::Status::UP == lora.getStatus()) {
-                
+        if (LoraCommunication::Status::UP == lora.getStatus()) {
+            
             // If ready regulary send sensor data to the server / iota tangle
+            std::string sensorJson("{");
+            // Read the sensor information and put it to in the JSON string
+            sensorJson.append(sensorBoard.toJSON());
+            sensorJson.append(",\"s\":\"0x00\"}");
+            // Print the data we want to send
+            printf("%s\r\n", sensorJson.c_str());
 
-            // To save energy only enable the sensors for reading
-            std::string sensorJson = sensorBoard.toJSON();
-            lora.sendMessage((uint8_t*) sensorJson.c_str(), sensorJson.size());
+            // Try to send the message
+            lora.sendMessage((uint8_t *)sensorJson.c_str(), sensorJson.size());
 
-            // ALso if we want to see what was read from the sensors, put it on the console
-            printf("Read sensor data and try to send it to the server\r\n");
-            printf("Data: ");
-            printf(sensorJson.c_str());
-            printf("\r\n");
 
             // Poll for incoming data
-            if(true == lora.receiveMessage((uint8_t*)messageBuffer, sizeof(messageBuffer), &receivedBytes)) {
-                
-                // Todo Now we have to parse the incoming Json message
-                // display.setLicense();
-                // display.setParkingEndTime();
+            if (true == lora.receiveMessage((uint8_t *)messageBuffer, sizeof(messageBuffer), &receivedBytes))
+            {
+                std::string license;
+                time_t endtime;
 
-                // Finally there is booking, so lets show the customer
-                display.showParkingScreen();
+                if(true == parseJsonMessage(messageBuffer, sizeof(receivedBytes), license, endtime)) {
+                    printf("Show the ne booking parameter on the parking sign\r\n");
+                    printf("License Plate: %s\r\n", license.c_str());
+
+                    display.setLicense(license);
+                    display.setParkingEndTime(endtime);
+
+                    // Finally there is booking, so lets show the customer
+                    display.showParkingScreen();
+                }
+                else {
+                    printf("Received message from the server is not a valid json message\n");
+                }
+
             }
-
         }
-        
+
         thread_sleep_for(30000);
     }
 }
