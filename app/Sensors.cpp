@@ -37,7 +37,7 @@ uint8_t flag[] = {
 };
 
 Sensors::Sensors() :
-    enableFlags(flag[NoSensors])
+    enableFlags(0x07)
 {
     i2cLoraShield = new DevI2C(LRWAN1_I2C_SDA, LRWAN1_I2C_SCL);
 
@@ -180,44 +180,47 @@ std::string Sensors::toJSON()
 {
     char buffer[32];
     char valueBuffer[10];
-    std::string json("{");
-    json.append("\"s\":\"0xff\",");
-
+    std::string json;
+    
+    // Normally we would use a sensor data object, but since data is limited
+    // let's try to keep the message as short as possible
+    
     if((enableFlags & flag[Humidity]) == flag[Humidity]) {
-        snprintf(buffer, sizeof(buffer), "\"h\":%3s,", print_double(valueBuffer, humidity, 1));
+        snprintf(buffer, sizeof(buffer), "\"h\":%s,", print_double(valueBuffer, humidity, 1));
         json.append(buffer);
     }
 
     if((enableFlags & flag[Temperature1]) == flag[Temperature1]) {
-        snprintf(buffer, sizeof(buffer), "\"t\":%3s,", print_double(valueBuffer, temperature1, 1));
+        snprintf(buffer, sizeof(buffer), "\"t\":%s,", print_double(valueBuffer, temperature1, 1));
         json.append(buffer);
     }
 
     if((enableFlags & flag[Pressure]) == flag[Pressure]) {
-        snprintf(buffer, sizeof(buffer), "\"p\":%3s,", print_double(valueBuffer, pressure, 0));
+        snprintf(buffer, sizeof(buffer), "\"p\":%d,", (int) pressure);
         json.append(buffer);
     }
 
-    if((enableFlags & flag[Temperature2]) == flag[Temperature2]) {
-      snprintf(buffer, sizeof(buffer), "\"t2\":%3s,", print_double(valueBuffer, temperature2, 1));
-        json.append(buffer);
-    }
+    // Right now don't put this data in. But we transmit the first temperature anyway
+
+//    if((enableFlags & flag[Temperature2]) == flag[Temperature2]) {
+//      snprintf(buffer, sizeof(buffer), "\"t2\":%s,", print_double(valueBuffer, temperature2, 1));
+//        json.append(buffer);
+//    }
 
     // Delete the last comma, if the string is not empty
     if(!json.empty()) {
         json.pop_back();
     }
-    json.append("}");
 
     return json;
 }
 
 void Sensors::print()
 {
-    char valueBuffer1[10];
-    char valueBuffer2[10];
-
-    printf("\r\n");
+//    char valueBuffer1[10];
+//    char valueBuffer2[10];
+//
+//    printf("\r\n");
 //    printf("HTS221: [temp] %7s C,   [hum] %s%%\r\n", print_double(valueBuffer1, temperature1), print_double(valueBuffer2, humidity));
 //    printf("LPS22HB: [temp] %7s C, [press] %s mbar\r\n", print_double(valueBuffer1, temperature2), print_double(valueBuffer2, pressure));
 //    printf("LSM303AGR [mag/mgauss]:  %6ld, %6ld, %6ld\r\n", magnetometerAxes[0], magnetometerAxes[1], magnetometerAxes[2]);

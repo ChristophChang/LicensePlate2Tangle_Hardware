@@ -13,9 +13,9 @@
  *
  */
 
-
 #ifndef LICENSE_PLATE_DISPLAY_H
 #define LICENSE_PLATE_DISPLAY_H
+
 
 #include "epd4in2b.h"
 #include "epdpaint.h"
@@ -26,6 +26,9 @@
 #include <string>
 
 
+/**
+  * The battery level
+  */
 enum class BatteryLevel
 {
     EMPTY,
@@ -35,6 +38,10 @@ enum class BatteryLevel
 };
 
 
+/**
+ * EPaper Diplay controlling class.
+ * for show  
+ */
 class LicensePlateDisplay
 {
 public:
@@ -53,7 +60,7 @@ public:
 
 
     /**
-     * Set the temperatur in celsius 
+     * Set the temperature in celsius 
      */
     void setTemperature(float temperature);
 
@@ -63,7 +70,7 @@ public:
     void setBatteryLevel(BatteryLevel batterylevel);
 
     /**
-     * Set the QRCode 
+     * Set the QRCode to show, if parking lot is not booked
      */
     void setQRCode(QRCode *code);
 
@@ -97,17 +104,29 @@ private:
     std::string license;
     time_t parkingEndTime;
     
-    Thread thread;
     Paint painter;
     
+    /**
+     * Load the welcome screen and draw the qrcode 
+     * in the image buffer
+     */
     void paintWelcomeScreen();
+
+    /**
+     * Draw the license plate of the parking car and 
+     * end time and date in the image buffer
+     */
     void paintParkingScreen();
 
     /**
-     * Paint the batter level on the top right corner
+     * Paint the battery level on the top right corner
      * This actually updates the bars 
      */
     void paintBatteryLevel();
+
+    /**
+     * Update the temperature information with the image buffer 
+     */
     void paintTemperature();
 };
 

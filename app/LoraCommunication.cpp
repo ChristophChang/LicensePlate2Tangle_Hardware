@@ -22,6 +22,7 @@
 #include "platform/mbed_thread.h"
 
 
+// Defined with the boardmap.h
 const char appKey[] = LORAWAN_APP_KEY;
 const char appEUI[] = LORAWAN_APP_EUI;
 
@@ -34,8 +35,6 @@ constexpr uint32_t kThreadSleepTimeMs = 30000;   // Wake up all 60s
 // Serial to communicate with the
 static BufferedSerial serialLora(LRWAN1_UART_TX, LRWAN1_UART_RX, LRWAN1_UART_BAUD);
 HardwareSerial_mbedPort SerialLora(&serialLora);
-
-
 
 
 LoraCommunication::LoraCommunication() : thread(osPriorityNormal, 4096),
@@ -51,7 +50,6 @@ LoraCommunication::~LoraCommunication()
 
 void LoraCommunication::enable()
 {
-    // Just start the thread, the initialization is done within the thread
     thread.start(callback(this, &LoraCommunication::run));
 }
 
@@ -88,9 +86,9 @@ bool LoraCommunication::receiveMessage(uint8_t *buffer, const size_t bufferSize,
 
 void LoraCommunication::printLRWAN1Info()
 {
-    printf("Device EUI: %s", boardDevEUI.c_str());
-    printf("App Key: %s", boardAppKey.c_str());
-    printf("App EUI: %s", boardAppEUI.c_str());
+    printf("LoRa: Device EUI: %s", boardDevEUI.c_str());
+    printf("LoRa: App Key: %s", boardAppKey.c_str());
+    printf("LoRa: App EUI: %s", boardAppEUI.c_str());
 }
 
 void LoraCommunication::initialize()
@@ -102,7 +100,7 @@ void LoraCommunication::initialize()
 
     while (!loraNode.begin(&SerialLora, LORAWAN_BAND))
     {
-        printf("Lora module not ready. Trying again\r\n");
+        printf("Lora module not ready. Trying again...\r\n");
         thread_sleep_for(1000);
     }
 
@@ -125,7 +123,7 @@ void LoraCommunication::initialize()
     printf("\r\nLora module ready, join accepted.\r\n\n");
 
     // Read out some additonal information about your LRWAN1 board
-    printf("Reading lora module information\r\n");
+    printf("Reading lora module information...\r\n");
     loraNode.getDevEUI(boardDevEUI);
     loraNode.getAppKey(boardAppKey);
     loraNode.getAppEUI(boardAppEUI);
@@ -141,7 +139,7 @@ bool LoraCommunication::receive()
 
     // Check if data received from a gateway
     if (loraNode.receiveFrame(message->data, (uint8_t*) message->bytes, &port)) {
-        printf("LoRa Frame received, on port %d\r\n", port);
+        printf("LoRa: Frame received, on port %d\r\n", port);
         for (int i = 0; i < message->bytes; i++) {
             printf("0x%x, ", message->data[i]);
         }
@@ -167,7 +165,7 @@ bool LoraCommunication::transmit()
         int status = loraNode.sendFrame((char*) message->data, message->bytes, UNCONFIRMED);
 
         if (LORA_SEND_ERROR == status) {
-            printf("Send frame failed!!!\r\n");
+            printf("LoRa: Send frame failed!!!\r\n");
             // Put the message back to sent it later
             // Todo: Put it at first place in queue
             if(false == txMessageQueue.try_put(message)) {
@@ -175,7 +173,7 @@ bool LoraCommunication::transmit()
             }
         }
         else if (LORA_SEND_DELAYED == status) {
-            printf("Module busy or duty cycle\r\n");
+            printf("LoRa: Module busy or duty cycle\r\n");
             // Put the message back to sent it later
             // Todo: Put it at first place in queue
             if(false == txMessageQueue.try_put(message)) {
@@ -183,7 +181,7 @@ bool LoraCommunication::transmit()
             }
         }
         else {
-            printf("Frame sent\r\n");
+            printf("LoRa: Frame sent\r\n");
             result = true;
             delete message;
         }
@@ -200,18 +198,34 @@ void LoraCommunication::run()
 
     while (true)
     {
-        receive();
-        // IF the time has elapsed send data, if available
-        if(time(NULL) > (rxMessagePollTimer + kReceiveDutyTimeS)) {
-            receive();
-            txMessageSendTimer = time(NULL);
-        }
+
+        // TODO:   !!!!!!!!! Check, if timer work correctly !!!!!!!!!!!
+
+
+        // This is a LoRaWAN Class A device so data can only be received 
+        // after an uplink transmission. So first we have to send a message
+        // in order to get one.
+        // https://www.thethingsnetwork.org/docs/lorawan/classes.html
 
         // IF the time has elapsed send data, if available
-        if(time(NULL) > (txMessageSendTimer + kSendDutyTimeS)) {
+        if (time(NULL) > (txMessageSendTimer + kSendDutyTimeS)) {
             transmit();
             txMessageSendTimer = time(NULL);
         }
+
+       // IF the time has elapsed send data, if available
+       if (time(NULL) > (rxMessagePollTimer + kReceiveDutyTimeS)) {
+           // Since we are not sending so often, but we also don't want 
+           // the customer wait too long on an incoming message.
+           // So let's send a very short frame and try to listen for incoming 
+           // messages.
+           char pollByte = 0xff;
+           loraNode.sendFrame((char*) pollByte, sizeof(pollByte), UNCONFIRMED);
+
+           // Now let's see, if there is something in the mailbox
+           receive();
+           txMessageSendTimer = time(NULL);
+       }
 
         thread_sleep_for(kThreadSleepTimeMs);
     }

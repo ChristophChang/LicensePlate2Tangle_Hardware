@@ -56,9 +56,6 @@ void ParkingArea::run()
     // Read in a new measurement value
     distanceSensor.readEcho();
     distance = distanceSensor.getCm();
-
-    // If an object was detected start a timer, to ensure it is not a person crossing
-
 }
 
 

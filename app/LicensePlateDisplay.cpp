@@ -46,8 +46,13 @@ LicensePlateDisplay::LicensePlateDisplay() :
               temperature(23.3),
               batteryLevel(BatteryLevel::MEDIUM),
               qrCode(nullptr),
-              license("IO:TA2020"),
+              license("xx:xx2020"),
               parkingEndTime(1606004894)
+{
+
+}
+
+LicensePlateDisplay::~LicensePlateDisplay()
 {
 
 }

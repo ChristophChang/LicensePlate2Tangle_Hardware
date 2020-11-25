@@ -1,6 +1,4 @@
 /*
- *  Copyright (C) ChaLie    November 13 2020
- * 
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
  *  not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -25,10 +23,11 @@
 #include "app/LicensePlateDisplay.h"
 #include "app/ParkingArea.h"
 
-#include "QRCode/src/qrcode.h"
 #include "JSON/Json.h"
+#include "QRCode/src/qrcode.h"
 
-// Console 
+
+// Standard console configuration
 static BufferedSerial serial_port(CONSOLE_TX, CONSOLE_RX, CONSOLE_BAUD);
 
 FileHandle *mbed::mbed_override_console(int fd)
@@ -106,10 +105,29 @@ bool parseJsonMessage(const char* jsonString, size_t length, std::string &licens
  */
 int main()
 {    
-    printf("\r\n");
+    printf("\r\n\n");
     printf("=====================================\r\n");
-    printf("=====LicensePlate2Tangle Project=====\r\n");
+    printf("=====    LicensePlate2Tangle    =====\r\n");
+    printf("=====       Parking Sign        =====\r\n");
+    printf("=====================================\r\n");
+    printf("Project: IOTA License2Plate          \r\n");
+    printf("License: Apache 2.0                  \r\n");
+    printf("Date:    2020/11/25                  \r\n");
     printf("=====================================\r\n\n");
+
+    printf("==============================================================\r\n");
+    printf("Visit:                                                        \r\n");
+    printf("https://github.com/ChristophChang/LicensePlate2Tangle_Hardware\r\n");
+    printf("==============================================================\r\n\n");
+
+    printf("Staring up...\r\n");
+    
+    // Variables used
+    char messageBuffer[80];
+    size_t receivedBytes = 0;
+
+    // The device status using flags e.g. to show if the parking lot is occupied
+    uint8_t deviceStatus = 0x00;
 
     // Initialize the license plate components
     ParkingArea parkingArea;
@@ -117,22 +135,20 @@ int main()
     LoraCommunication lora;
     LicensePlateDisplay display;
 
-    printf("Initializing Waveshare 4.2 Epaper display\r\n");
+    printf("Initializing Waveshare 4.2 Epaper display...\r\n");
     // Enable sensors to read data from
     sensorBoard.enable(Temperature1);
     sensorBoard.read();
 
     // Update the display information with the temperature value
     // read from the sensor
-    printf("Get temperature\r\n");
+    printf("Reading sensor values...\r\n");
     display.setTemperature(sensorBoard.getValueFloat(Temperature1));
-
     // For now the battery level is not supported, for now set it to full
-    printf("Get battery level\r\n");
     display.setBatteryLevel(BatteryLevel::FULL);
 
     // The QRCode will only be generated once
-    printf("Create QRCode from device\r\n");
+    printf("Create QRCode from device...\r\n");
     QRCode qrcode;
     uint8_t *qrcodeData = new uint8_t[qrcode_getBufferSize(4)];
     qrcode_initText(&qrcode, qrcodeData, 4, 0, QRCODE_APP_ID);   
@@ -140,42 +156,49 @@ int main()
     display.setQRCode(&qrcode);
 
     // On startup and show the welcome screen 
-    printf("Show welcome screen\r\n");
+    printf("Show welcome screen...\r\n");
     display.enable();
     
     // Now start up the lora communication module
-    printf("Initializing the Lora communication module\r\n");
+    printf("Initializing the Lora communication module...\r\n");
     lora.enable(); 
 
-
-    char messageBuffer[80];
-    size_t receivedBytes = 0;
-    uint8_t deviceStatus = 0x00;
-
+    // This is the main loop
     while (true) {
         // Now wait until the lora communication module is ready
         if (LoraCommunication::Status::UP == lora.getStatus()) {
+
+            // TX: Try to regulary send sensor data
+            // ------------------------------------
+            // This is how the data should look like: {"h":56.2,"t":21.7,"p":981,"s":"0x00"}
             
             // If ready regulary send sensor data to the server / iota tangle
             std::string sensorJson("{");
-            // Read the sensor information and put it to in the JSON string
             sensorJson.append(sensorBoard.toJSON());
-            sensorJson.append(",\"s\":\"0x00\"}");
+            sensorJson.append(",\"s\":\"");
+            char statusText[8];
+            snprintf(statusText, sizeof(statusText), "0x%x", deviceStatus);
+            sensorJson.append(statusText);
+            sensorJson.append("\"}");
+
             // Print the data we want to send
-            printf("%s\r\n", sensorJson.c_str());
+            printf("Try to send this message: %s\r\n", sensorJson.c_str());
 
             // Try to send the message
             lora.sendMessage((uint8_t *)sensorJson.c_str(), sensorJson.size());
 
 
-            // Poll for incoming data
+            // RX: Poll for incoming data
+            // --------------------------
+            // This is the data we expect from the server: {"l":"IO:TA2020","t":"1606004894"}
+
             if (true == lora.receiveMessage((uint8_t *)messageBuffer, sizeof(messageBuffer), &receivedBytes))
             {
                 std::string license;
                 time_t endtime;
 
                 if(true == parseJsonMessage(messageBuffer, sizeof(receivedBytes), license, endtime)) {
-                    printf("Show the ne booking parameter on the parking sign\r\n");
+                    printf("Show the ne booking parameter on the parking sign...\r\n");
                     printf("License Plate: %s\r\n", license.c_str());
 
                     display.setLicense(license);
@@ -187,7 +210,6 @@ int main()
                 else {
                     printf("Received message from the server is not a valid json message\n");
                 }
-
             }
         }
 

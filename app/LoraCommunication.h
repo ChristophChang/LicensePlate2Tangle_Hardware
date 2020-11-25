@@ -16,20 +16,36 @@
 #ifndef LORA_COMMUNICATION_H
 #define LORA_COMMUNICATION_H
 
+
 #include "mbed.h"
 #include <stdint.h>
 
+
+/**
+ * LoRa communication
+ * @details The LoRa communication implements its own thread, 
+ *          since it is not guaranteed, that the message can be 
+ *          sent right away. 
+ *          The airtime and therefore the dutycycle is regulated,
+ *          and specified by the LoRa Alliance.
+ *          Messages will be buffered with a queue in order to retry
+ *          sending the message next time, if denied from the LRWAN1
+ *          module because of a high dutycycle.
+ */
 class LoraCommunication
 {
 public:
     LoraCommunication();
     ~LoraCommunication();
 
+    /**
+     * Indicator for the LoRa Communciaton state
+     */
     enum class Status{
-        NOINIT,
-        DOWN,
-        UP,
-        ERROR
+        NOINIT,      // The LoRa module is not initialized yet
+        DOWN,        // The LoRa module is down
+        UP,          // The LoRa module is initialized and connected by OTAA
+        ERROR        // There is an error with the module
     };
 
     /**
@@ -66,8 +82,8 @@ public:
 
 
 private:
-    Thread thread;
 
+    Thread thread;
     Status status;
 
     /**
@@ -78,11 +94,12 @@ private:
         uint8_t data[N];
         size_t bytes;
 
+        //! Ctor
         Message() : bytes(0) {
             memset(data, 0x00, sizeof(data));
         }
 
-        // Make a deep copy
+        //! Make a deep copy
         Message(const uint8_t *data, size_t bytes) {
             this->bytes = bytes;
             memcpy(this->data, data, bytes);
@@ -107,15 +124,20 @@ private:
      */
     void initialize();
 
+    /**
+     * Ask the LRWAN1 module if a LoRa message was received and get it
+     */
     bool receive();
+
+    /**
+     * Try to send the frame in the queue
+     */
     bool transmit();
 
     /**
-     * Is automatically called by mbed os
+     * Is automatically called by Mbed os
      */
     void run();
-
-
 };
 
 #endif /* LORA_COMMUNICATION_H */

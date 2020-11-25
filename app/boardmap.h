@@ -16,13 +16,13 @@
 #ifndef BOARD_MAP_H 
 #define BOARD_MAP_H 
 
-// Boardmap for NUCLEO-L152RE
-// TODO:
-// Find the right place to define SPI_3
-// or try to use another SPI for the Epaper.
-// Required in mbed-os\targets\TARGET_STM\TARGET_STM32L1\spi_api.c
+// ----------------------------------------
+// Boardmap for STM NUCLEO-L152RE
+// ----------------------------------------
 
-// Console configuration
+
+// Console configuration - available with NUCLEO USB
+// Serial settings are: 115200 8N1
 #define CONSOLE_TX              USBTX 
 #define CONSOLE_RX              USBRX
 #define CONSOLE_BAUD            115200 
@@ -35,10 +35,10 @@
 #define LRWAN1_I2C_SDA          I2C_SDA
 #define LRWAN1_I2C_SCL          I2C_SCL
 
-// 4.2 Waveshare epaper configuration  
-#define EPAPER_WS42_MOSI        PA_12 // PC_12  
+// 4.2 Waveshare epaper configuration - using SPI1
+#define EPAPER_WS42_MOSI        PA_12
 #define EPAPER_WS42_MISO        NC
-#define EPAPER_WS42_SCLK        PA_5// PC_10
+#define EPAPER_WS42_SCLK        PA_5
 #define EPAPER_WS42_CS          PA_15
 #define EPAPER_WS42_DC          PC_2
 #define EPAPER_WS42_RST         PC_3
@@ -53,9 +53,13 @@
 // LoRaWAN credentials
 #define LORAWAN_BAND            LORA_BAND_EU_868
 
+// LoRaWAN credentials
+// Must be generated from https://www.thethingsnetwork.org/
+// for TTN LoRaWAN integration
 #define LORAWAN_APP_KEY         "06EB704DA820830B830E0DE331380D5E"
 #define LORAWAN_APP_EUI         "70B3D57ED0037C11"
 
+// Android app credentials
 #define QRCODE_APP_ID           "LicensePlate2Tangle,uid=E24F43FFFE44C3FC"
 
 #endif /* BOARD_MAP_H */

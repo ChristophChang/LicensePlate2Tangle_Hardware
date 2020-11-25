@@ -1,6 +1,4 @@
 /*
- *  Copyright (C) ChaLie    November 13 2020
- * 
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
  *  not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -25,6 +23,7 @@
 
 /**
   * Parking area information 
+  * Check if a park has occupied the parking spot with the HC-SR04 ultrasonic distance sensor
   */
 class ParkingArea
 {
@@ -52,9 +51,6 @@ public:
      */
     void print();
 
-protected:
-    void run();
-    
 private:
     constexpr static int kMinimumDistanceCm = 100;  // 0.1m
     constexpr static int kMaximumDistanceCm = 2000; // 2m
@@ -71,6 +67,8 @@ private:
 
     Timer parkingTimer;
     Timeout parkingDetectTimeout;
+
+    void run();
 };
 
 
