@@ -19,7 +19,7 @@
 
 #include "mbed.h"
 #include <stdint.h>
-
+#include <string>
 
 /**
  * LoRa communication

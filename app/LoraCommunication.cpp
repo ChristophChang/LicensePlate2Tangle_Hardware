@@ -136,10 +136,12 @@ bool LoraCommunication::receive()
     uint8_t port;
     bool result = false;
     RxMessage *message = new RxMessage();
-    message->bytes = sizeof(message->data);
+    uint8_t bytes;
     
     // Check if data received from a gateway
-    if (loraNode.receiveFrame(message->data, (uint8_t*) message->bytes, &port)) {
+    if (loraNode.receiveFrame(message->data, &bytes, &port)) {
+        message->bytes = bytes;
+
         printf("LoRa: Frame received, on port %d\r\n", port);
         for (int i = 0; i < message->bytes; i++) {
             printf("0x%x, ", message->data[i]);
