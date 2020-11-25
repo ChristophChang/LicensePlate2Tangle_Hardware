@@ -87,8 +87,8 @@ bool LoraCommunication::receiveMessage(uint8_t *buffer, const size_t bufferSize,
 void LoraCommunication::printLRWAN1Info()
 {
     printf("LoRa: Device EUI: %s", boardDevEUI.c_str());
-    printf("LoRa: App Key: %s", boardAppKey.c_str());
     printf("LoRa: App EUI: %s", boardAppEUI.c_str());
+    printf("LoRa: App Key: %s", boardAppKey.c_str());
 }
 
 void LoraCommunication::initialize()
@@ -125,9 +125,10 @@ void LoraCommunication::initialize()
     // Read out some additonal information about your LRWAN1 board
     printf("Reading lora module information...\r\n");
     loraNode.getDevEUI(boardDevEUI);
-    loraNode.getAppKey(boardAppKey);
     loraNode.getAppEUI(boardAppEUI);
-
+    loraNode.getAppKey(boardAppKey);
+    printLRWAN1Info();
+    
     status = Status::UP;
 }
 
