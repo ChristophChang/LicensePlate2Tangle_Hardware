@@ -27,9 +27,9 @@ const char appKey[] = LORAWAN_APP_KEY;
 const char appEUI[] = LORAWAN_APP_EUI;
 
 
-constexpr time_t kSendDutyTimeS = 60;            // Try to send data all 60s, if data is available
-constexpr time_t kReceiveDutyTimeS = 60;         // Check all 60s for incoming data
-constexpr uint32_t kThreadSleepTimeMs = 30000;   // Wake up all 60s
+constexpr time_t kSendDutyTimeS = 30 * 60;       // Try to send data all 30min if data is available
+constexpr time_t kReceiveDutyTimeS = 60;         // Check all 1min for incoming data
+constexpr uint32_t kThreadSleepTimeMs = 30000;   // Wake up all 30s
 
 
 // Serial to communicate with the
@@ -106,7 +106,7 @@ void LoraCommunication::initialize()
 
     printf("Lora module initialized\r\n");
 
-    thread_sleep_for(1000);
+    thread_sleep_for(3000);
 
     printf("Starting join OTAA procedure...\r\n");
     // Send a join request and wait for the join accept
@@ -136,7 +136,8 @@ bool LoraCommunication::receive()
     uint8_t port;
     bool result = false;
     RxMessage *message = new RxMessage();
-
+    message->bytes = sizeof(message->data);
+    
     // Check if data received from a gateway
     if (loraNode.receiveFrame(message->data, (uint8_t*) message->bytes, &port)) {
         printf("LoRa: Frame received, on port %d\r\n", port);
@@ -195,13 +196,9 @@ void LoraCommunication::run()
 
     txMessageSendTimer = time(NULL);
     rxMessagePollTimer = time(NULL);
-
+    
     while (true)
     {
-
-        // TODO:   !!!!!!!!! Check, if timer work correctly !!!!!!!!!!!
-
-
         // This is a LoRaWAN Class A device so data can only be received 
         // after an uplink transmission. So first we have to send a message
         // in order to get one.
@@ -222,9 +219,11 @@ void LoraCommunication::run()
            char pollByte = 0xff;
            loraNode.sendFrame((char*) pollByte, sizeof(pollByte), UNCONFIRMED);
 
+           thread_sleep_for(10000);
+           
            // Now let's see, if there is something in the mailbox
            receive();
-           txMessageSendTimer = time(NULL);
+           rxMessagePollTimer = time(NULL);
        }
 
         thread_sleep_for(kThreadSleepTimeMs);

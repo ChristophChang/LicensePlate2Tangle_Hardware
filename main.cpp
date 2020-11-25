@@ -129,6 +129,9 @@ int main()
     // The device status using flags e.g. to show if the parking lot is occupied
     uint8_t deviceStatus = 0x00;
 
+    // Since we have no sytem time, just 
+    set_time(1606345199);
+    
     // Initialize the license plate components
     ParkingArea parkingArea;
     Sensors sensorBoard;
@@ -158,6 +161,7 @@ int main()
     // On startup and show the welcome screen 
     printf("Show welcome screen...\r\n");
     display.enable();
+    display.showWelcomeScreen();
     
     // Now start up the lora communication module
     printf("Initializing the Lora communication module...\r\n");
@@ -177,7 +181,7 @@ int main()
             sensorJson.append(sensorBoard.toJSON());
             sensorJson.append(",\"s\":\"");
             char statusText[8];
-            snprintf(statusText, sizeof(statusText), "0x%x", deviceStatus);
+            snprintf(statusText, sizeof(statusText), "0x%02x", deviceStatus);
             sensorJson.append(statusText);
             sensorJson.append("\"}");
 
@@ -190,7 +194,7 @@ int main()
 
             // RX: Poll for incoming data
             // --------------------------
-            // This is the data we expect from the server: {"l":"IO:TA2020","t":"1606004894"}
+            // This is the data we expect from the server: {"l":"IO:TA2020","t":1606004894}
 
             if (true == lora.receiveMessage((uint8_t *)messageBuffer, sizeof(messageBuffer), &receivedBytes))
             {
